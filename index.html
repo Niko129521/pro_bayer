@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра: Курьер</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB, #FFFFFF);
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background-color: #87CEEB;
+        }
+
+        .score {
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            color: #333;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
+
+        .game-over {
+            font-family: Arial, sans-serif;
+            font-size: 36px;
+            color: red;
+            text-align: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="score">Очки: 0</div>
+    <div class="game-over">Игра окончена!</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let courier = { x: 50, y: canvas.height - 150, width: 50, height: 50, speed: 5 };
+        let items = [];
+        let obstacles = [];
+        let score = 0;
+        let gameOver = false;
+
+        // Курьер
+        const courierImage = new Image();
+        courierImage.src = 'https://img.icons8.com/ios/452/delivery-truck.png';
+
+        // Функция для создания препятствий
+        function createObstacle() {
+            const size = Math.random() * 30 + 30;
+            const yPos = canvas.height - size - 50;
+            obstacles.push({ x: canvas.width, y: yPos, width: size, height: size });
+        }
+
+        // Функция для создания товаров
+        function createItem() {
+            const itemTypes = ['clothes', 'box']; // Символизирует разные товары
+            const type = itemTypes[Math.floor(Math.random() * itemTypes.length)];
+            const size = 30;
+            const yPos = canvas.height - size - 50;
+            items.push({ x: canvas.width, y: yPos, width: size, height: size, type: type });
+        }
+
+        // Движение курьера
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowUp' && courier.y > 0) {
+                courier.y -= courier.speed;
+            }
+            if (event.key === 'ArrowDown' && courier.y < canvas.height - courier.height) {
+                courier.y += courier.speed;
+            }
+            if (event.key === 'ArrowLeft' && courier.x > 0) {
+                courier.x -= courier.speed;
+            }
+            if (event.key === 'ArrowRight' && courier.x < canvas.width - courier.width) {
+                courier.x += courier.speed;
+            }
+        });
+
+        // Функция для обновления игры
+        function update() {
+            if (gameOver) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(courierImage, courier.x, courier.y, courier.width, courier.height);
+
+            // Двигаем и рисуем товары
+            items.forEach((item, index) => {
+                item.x -= 3;
+                ctx.fillStyle = item.type === 'clothes' ? 'green' : 'yellow';
+                ctx.fillRect(item.x, item.y, item.width, item.height);
+
+                // Проверка на столкновение с курьером
+                if (courier.x < item.x + item.width &&
+                    courier.x + courier.width > item.x &&
+                    courier.y < item.y + item.height &&
+                    courier.y + courier.height > item.y) {
+                    items.splice(index, 1);
+                    score++;
+                    document.querySelector('.score').textContent = `Очки: ${score}`;
+                }
+
+                if (item.x < 0) {
+                    items.splice(index, 1);
+                }
+            });
+
+            // Двигаем и рисуем препятствия
+            obstacles.forEach((obstacle, index) => {
+                obstacle.x -= 4;
+                ctx.fillStyle = 'red';
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+
+                // Проверка на столкновение с курьером
+                if (courier.x < obstacle.x + obstacle.width &&
+                    courier.x + courier.width > obstacle.x &&
+                    courier.y < obstacle.y + obstacle.height &&
+                    courier.y + courier.height > obstacle.y) {
+                    gameOver = true;
+                    document.querySelector('.game-over').style.display = 'block';
+                }
+
+                if (obstacle.x < 0) {
+                    obstacles.splice(index, 1);
+                }
+            });
+
+            // Создаем новые объекты через определенное время
+            if (Math.random() < 0.01) createItem();
+            if (Math.random() < 0.02) createObstacle();
+
+            requestAnimationFrame(update);
+        }
+
+        // Запуск игры
+        update();
+    </script>
+</body>
+</html>
