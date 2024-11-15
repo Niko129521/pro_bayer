@@ -3,264 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PRO BAYER</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Игра с курьером</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #f2f2f2;
+        }
+
+        canvas {
+            display: block;
+            background-color: #f0f0f0;
+            margin: 0 auto;
+        }
+
+        #courier-sprite {
+            display: none;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: red;
+            font-family: Arial, sans-serif;
+        }
+    </style>
 </head>
 <body>
-    <!-- Контейнер для игры -->
-    <div id="game-container">
-        <!-- Игровое поле -->
-        <canvas id="game-canvas" width="600" height="150"></canvas>
-    </div>
-    <!-- Подключение основного скрипта -->
-    <script src="script.js"></script>
+    <canvas id="gameCanvas"></canvas>
+    <img id="courier-sprite" src="courier-sprite.png" alt="Courier Sprite">
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const courierImage = document.getElementById("courier-sprite");
+
+        const courier = {
+            x: 50,
+            y: canvas.height - 150,
+            width: 50,
+            height: 50,
+            speed: 5,
+            dy: 0,
+            jumping: false,
+            jumpHeight: 15
+        };
+
+        const obstacles = [];
+        const obstacleSpeed = 5;
+        let gameOver = false;
+
+        window.addEventListener("keydown", function(e) {
+            if (e.code === "Space" && !courier.jumping) {
+                courier.jumping = true;
+                courier.dy = -courier.jumpHeight;
+            }
+        });
+
+        function createObstacle() {
+            const height = Math.random() * (canvas.height / 2) + 20;
+            obstacles.push({ x: canvas.width, y: canvas.height - height, width: 30, height: height });
+        }
+
+        function moveObstacles() {
+            for (let i = 0; i < obstacles.length; i++) {
+                obstacles[i].x -= obstacleSpeed;
+                if (obstacles[i].x + obstacles[i].width < 0) {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+
+        function checkCollisions() {
+            for (let i = 0; i < obstacles.length; i++) {
+                if (courier.x + courier.width > obstacles[i].x && courier.x < obstacles[i].x + obstacles[i].width &&
+                    courier.y + courier.height > obstacles[i].y) {
+                    gameOver = true;
+                }
+            }
+        }
+
+        function updateCourier() {
+            if (courier.jumping) {
+                courier.dy += 1; // Gravity
+                courier.y += courier.dy;
+                if (courier.y >= canvas.height - 150) {
+                    courier.y = canvas.height - 150;
+                    courier.jumping = false;
+                    courier.dy = 0;
+                }
+            }
+        }
+
+        function draw() {
+            if (gameOver) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "red";
+                ctx.font = "48px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2);
+                return;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(courierImage, courier.x, courier.y, courier.width, courier.height);
+
+            for (let i = 0; i < obstacles.length; i++) {
+                ctx.fillStyle = "green";
+                ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].width, obstacles[i].height);
+            }
+
+            updateCourier();
+            moveObstacles();
+            checkCollisions();
+
+            requestAnimationFrame(draw);
+        }
+
+        function gameLoop() {
+            createObstacle();
+            draw();
+        }
+
+        setInterval(gameLoop, 1000 / 60); // 60 FPS
+
+    </script>
 </body>
 </html>
 
-<script type="text/javascript">
-function hideClass(name) {
-    var myClasses = document.querySelectorAll(name),
-    i = 0,
-    l = myClasses.length;
-
-    for (i; i < l; i++) {
-        myClasses[i].style.display = 'none';
-    }
-}
-
-// Код игры (T-Rex) начинается здесь
-
-(function() {
-    'use strict';
-    function Runner(outerContainerId, opt_config) {
-        if (Runner.instance_) {
-            return Runner.instance_;
-        }
-        Runner.instance_ = this;
-        this.outerContainerEl = document.querySelector(outerContainerId);
-        this.containerEl = null;
-        this.config = opt_config || Runner.config;
-        this.dimensions = Runner.defaultDimensions;
-        this.canvas = null;
-        this.canvasCtx = null;
-        this.tRex = null;
-        this.distanceMeter = null;
-        this.distanceRan = 0;
-        this.highestScore = 0;
-        this.time = 0;
-        this.runningTime = 0;
-        this.msPerFrame = 1000 / FPS;
-        this.currentSpeed = this.config.SPEED;
-        this.obstacles = [];
-        this.started = false;
-        this.activated = false;
-        this.crashed = false;
-        this.paused = false;
-        this.resizeTimerId_ = null;
-        this.playCount = 0;
-        this.audioBuffer = null;
-        this.soundFx = {};
-        this.audioContext = null;
-        this.images = {};
-        this.imagesLoaded = 0;
-        this.loadImages();
-    }
-
-    window['Runner'] = Runner;
-
-    var DEFAULT_WIDTH = 600;
-    var FPS = 60;
-    var IS_HIDPI = window.devicePixelRatio > 1;
-    var IS_IOS = window.navigator.userAgent.indexOf('UIWebViewForStaticFileContent') > -1;
-    var IS_MOBILE = window.navigator.userAgent.indexOf('Mobi') > -1 || IS_IOS;
-    var IS_TOUCH_ENABLED = 'ontouchstart' in window;
-
-    Runner.config = {
-        ACCELERATION: 0.001,
-        BG_CLOUD_SPEED: 0.2,
-        BOTTOM_PAD: 10,
-        CLEAR_TIME: 3000,
-        CLOUD_FREQUENCY: 0.5,
-        GAMEOVER_CLEAR_TIME: 750,
-        GAP_COEFFICIENT: 0.6,
-        GRAVITY: 0.6,
-        INITIAL_JUMP_VELOCITY: 12,
-        MAX_CLOUDS: 6,
-        MAX_OBSTACLE_LENGTH: 3,
-        MAX_SPEED: 12,
-        MIN_JUMP_HEIGHT: 35,
-        MOBILE_SPEED_COEFFICIENT: 1.2,
-        RESOURCE_TEMPLATE_ID: 'audio-resources',
-        SPEED: 6,
-        SPEED_DROP_COEFFICIENT: 3
-    };
-
-    Runner.defaultDimensions = {
-        WIDTH: DEFAULT_WIDTH,
-        HEIGHT: 150
-    };
-
-    Runner.classes = {
-        CANVAS: 'runner-canvas',
-        CONTAINER: 'runner-container',
-        CRASHED: 'crashed',
-        ICON: 'icon-offline',
-        TOUCH_CONTROLLER: 'controller'
-    };
-
-    Runner.imageSources = {
-        LDPI: [
-            {name: 'CACTUS_LARGE', id: '1x-obstacle-large'},
-            {name: 'CACTUS_SMALL', id: '1x-obstacle-small'},
-            {name: 'CLOUD', id: '1x-cloud'},
-            {name: 'HORIZON', id: '1x-horizon'},
-            {name: 'RESTART', id: '1x-restart'},
-            {name: 'TEXT_SPRITE', id: '1x-text'},
-            {name: 'TREX', id: '1x-trex'}
-        ],
-        HDPI: [
-            {name: 'CACTUS_LARGE', id: '2x-obstacle-large'},
-            {name: 'CACTUS_SMALL', id: '2x-obstacle-small'},
-            {name: 'CLOUD', id: '2x-cloud'},
-            {name: 'HORIZON', id: '2x-horizon'},
-            {name: 'RESTART', id: '2x-restart'},
-            {name: 'TEXT_SPRITE', id: '2x-text'},
-            {name: 'TREX', id: '2x-trex'}
-        ]
-    };
-
-    Runner.sounds = {
-        BUTTON_PRESS: 'offline-sound-press',
-        HIT: 'offline-sound-hit',
-        SCORE: 'offline-sound-reached'
-    };
-
-    Runner.keycodes = {
-        JUMP: {'38': 1, '32': 1}, // Up, spacebar
-        DUCK: {'40': 1}, // Down
-        RESTART: {'13': 1} // Enter
-    };
-
-    Runner.events = {
-        ANIM_END: 'webkitAnimationEnd',
-        CLICK: 'click',
-        KEYDOWN: 'keydown',
-        KEYUP: 'keyup',
-        MOUSEDOWN: 'mousedown',
-        MOUSEUP: 'mouseup',
-        RESIZE: 'resize',
-        TOUCHEND: 'touchend',
-        TOUCHSTART: 'touchstart',
-        VISIBILITY: 'visibilitychange',
-        BLUR: 'blur',
-        FOCUS: 'focus',
-        LOAD: 'load'
-    };
-
-    Runner.prototype = {
-        updateConfigSetting: function(setting, value) {
-            if (setting in this.config && value != undefined) {
-                this.config[setting] = value;
-                switch (setting) {
-                    case 'GRAVITY':
-                    case 'MIN_JUMP_HEIGHT':
-                    case 'SPEED_DROP_COEFFICIENT':
-                        this.tRex.config[setting] = value;
-                        break;
-                    case 'INITIAL_JUMP_VELOCITY':
-                        this.tRex.setJumpVelocity(value);
-                        break;
-                    case 'SPEED':
-                        this.setSpeed(value);
-                        break;
-                }
-            }
-        },
-
-        loadImages: function() {
-            var imageSources = IS_HIDPI ? Runner.imageSources.HDPI : Runner.imageSources.LDPI;
-            var numImages = imageSources.length;
-            for (var i = numImages - 1; i >= 0; i--) {
-                var imgSource = imageSources[i];
-                this.images[imgSource.name] = document.getElementById(imgSource.id);
-            }
-            this.init();
-        },
-
-        loadSounds: function() {
-            if (!IS_IOS) {
-                this.audioContext = new AudioContext();
-                var resourceTemplate = document.getElementById(this.config.RESOURCE_TEMPLATE_ID).content;
-                for (var sound in Runner.sounds) {
-                    var soundSrc = resourceTemplate.getElementById(Runner.sounds[sound]).src;
-                    soundSrc = soundSrc.substr(soundSrc.indexOf(',') + 1);
-                    var buffer = decodeBase64ToArrayBuffer(soundSrc);
-                    this.audioContext.decodeAudioData(buffer, function(index, audioData) {
-                        this.soundFx[index] = audioData;
-                    }.bind(this, sound));
-                }
-            }
-        },
-
-        setSpeed: function(opt_speed) {
-            var speed = opt_speed || this.currentSpeed;
-            if (this.dimensions.WIDTH < DEFAULT_WIDTH) {
-                var mobileSpeed = speed * this.dimensions.WIDTH / DEFAULT_WIDTH * this.config.MOBILE_SPEED_COEFFICIENT;
-                this.currentSpeed = mobileSpeed > speed ? speed : mobileSpeed;
-            } else if (opt_speed) {
-                this.currentSpeed = opt_speed;
-            }
-        },
-
-        init: function() {
-            this.adjustDimensions();
-            this.setSpeed();
-            this.containerEl = document.createElement('div');
-            this.containerEl.className = Runner.classes.CONTAINER;
-            this.canvas = createCanvas(this.containerEl, this.dimensions.WIDTH, this.dimensions.HEIGHT, Runner.classes.PLAYER);
-            this.canvasCtx = this.canvas.getContext('2d');
-            this.canvasCtx.fillStyle = '#f7f7f7';
-            this.canvasCtx.fill();
-            Runner.updateCanvasScaling(this.canvas);
-            this.horizon = new Horizon(this.canvas, this.images, this.dimensions, this.config.GAP_COEFFICIENT);
-            this.distanceMeter = new DistanceMeter(this.canvas, this.images.TEXT_SPRITE, this.dimensions.WIDTH);
-            this.tRex = new Trex(this.canvas, this.images.TREX);
-            this.outerContainerEl.appendChild(this.containerEl);
-            if (IS_MOBILE) {
-                this.createTouchController();
-            }
-            this.startListening();
-            this.update();
-            window.addEventListener(Runner.events.RESIZE, this.debounceResize.bind(this));
-        },
-
-        debounceResize: function() {
-            if (!this.resizeTimerId_) {
-                this.resizeTimerId_ = setInterval(this.resize.bind(this), 300);
-            }
-        },
-
-        resize: function() {
-            clearInterval(this.resizeTimerId_);
-            this.resizeTimerId_ = null;
-            this.adjustDimensions();
-            this.setSpeed();
-            this.horizon.resize(this.dimensions.WIDTH);
-            this.distanceMeter.resize(this.dimensions.WIDTH);
-            this.canvas.width = this.dimensions.WIDTH;
-            this.canvas.height = this.dimensions.HEIGHT;
-        },
-
-        adjustDimensions: function() {
-            var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
-            var height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
-            var ratio = height / width;
-            this.dimensions.WIDTH = width < DEFAULT_WIDTH ? width : DEFAULT_WIDTH;
-            this.dimensions.HEIGHT = Math.round(this.dimensions.WIDTH * ratio);
-        }
-    };
-})();
-</script>
 
 
 
