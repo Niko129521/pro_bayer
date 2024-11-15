@@ -3,146 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Игра с курьером</title>
+    <title>Courier Game</title>
     <style>
         body {
             margin: 0;
-            padding: 0;
             overflow: hidden;
-            background-color: #f2f2f2;
+            background-color: #f7f7f7;
         }
-
         canvas {
             display: block;
-            background-color: #f0f0f0;
+            background-color: #fff;
             margin: 0 auto;
         }
-
-        #courier-sprite {
-            display: none;
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
         }
-
-        .game-over {
+        #gameOver {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 48px;
-            color: red;
             font-family: Arial, sans-serif;
+            color: red;
+            display: none;
         }
     </style>
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
-    <img id="courier-sprite" src="courier-sprite.png" alt="Courier Sprite">
+    <div id="gameOver">Game Over</div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
+        const gameOverElement = document.getElementById("gameOver");
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        const courierImage = document.getElementById("courier-sprite");
+        const courierImage = new Image();
+        courierImage.src = 'https://github.com/your-username/your-repository/raw/main/courier.png'; // Замените на ваш URL PNG
 
         const courier = {
             x: 50,
-            y: canvas.height - 150,
+            y: canvas.height - 150, // Разместим курьера внизу
             width: 50,
-            height: 50,
+            height: 100,
             speed: 5,
-            dy: 0,
-            jumping: false,
-            jumpHeight: 15
+            image: courierImage,
+            moveUp: false,
+            moveDown: false
         };
 
-        const obstacles = [];
-        const obstacleSpeed = 5;
-        let gameOver = false;
-
-        window.addEventListener("keydown", function(e) {
-            if (e.code === "Space" && !courier.jumping) {
-                courier.jumping = true;
-                courier.dy = -courier.jumpHeight;
-            }
-        });
+        let obstacles = [];
+        let gameRunning = true;
 
         function createObstacle() {
             const height = Math.random() * (canvas.height / 2) + 20;
-            obstacles.push({ x: canvas.width, y: canvas.height - height, width: 30, height: height });
+            const gap = Math.random() * 150 + 50;
+            obstacles.push({
+                x: canvas.width,
+                y: Math.random() > 0.5 ? 0 : canvas.height - height,
+                width: 20,
+                height: height,
+                gap: gap
+            });
         }
 
-        function moveObstacles() {
+        function updateObstacles() {
             for (let i = 0; i < obstacles.length; i++) {
-                obstacles[i].x -= obstacleSpeed;
+                obstacles[i].x -= 5;
+
                 if (obstacles[i].x + obstacles[i].width < 0) {
                     obstacles.splice(i, 1);
+                    i--;
                 }
             }
         }
 
-        function checkCollisions() {
-            for (let i = 0; i < obstacles.length; i++) {
-                if (courier.x + courier.width > obstacles[i].x && courier.x < obstacles[i].x + obstacles[i].width &&
-                    courier.y + courier.height > obstacles[i].y) {
-                    gameOver = true;
+        function drawObstacles() {
+            for (const obstacle of obstacles) {
+                ctx.fillStyle = "green";
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                ctx.fillRect(obstacle.x, obstacle.y + obstacle.height + obstacle.gap, obstacle.width, canvas.height - obstacle.height - obstacle.gap);
+            }
+        }
+
+        function checkCollision() {
+            for (const obstacle of obstacles) {
+                if (courier.x + courier.width > obstacle.x && courier.x < obstacle.x + obstacle.width) {
+                    if (courier.y < obstacle.height || courier.y + courier.height > canvas.height - obstacle.height) {
+                        gameRunning = false;
+                    }
                 }
             }
+        }
+
+        function drawCourier() {
+            ctx.drawImage(courier.image, courier.x, courier.y, courier.width, courier.height);
         }
 
         function updateCourier() {
-            if (courier.jumping) {
-                courier.dy += 1; // Gravity
-                courier.y += courier.dy;
-                if (courier.y >= canvas.height - 150) {
-                    courier.y = canvas.height - 150;
-                    courier.jumping = false;
-                    courier.dy = 0;
-                }
+            if (courier.moveUp && courier.y > 0) {
+                courier.y -= courier.speed;
+            }
+
+            if (courier.moveDown && courier.y + courier.height < canvas.height) {
+                courier.y += courier.speed;
             }
         }
 
-        function draw() {
-            if (gameOver) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "red";
-                ctx.font = "48px Arial";
-                ctx.textAlign = "center";
-                ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2);
-                return;
-            }
-
+        function drawGame() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(courierImage, courier.x, courier.y, courier.width, courier.height);
+            drawCourier();
+            drawObstacles();
+            updateObstacles();
+            checkCollision();
 
-            for (let i = 0; i < obstacles.length; i++) {
-                ctx.fillStyle = "green";
-                ctx.fillRect(obstacles[i].x, obstacles[i].y, obstacles[i].width, obstacles[i].height);
+            if (gameRunning) {
+                requestAnimationFrame(drawGame);
+            } else {
+                gameOverElement.style.display = "block";
             }
-
-            updateCourier();
-            moveObstacles();
-            checkCollisions();
-
-            requestAnimationFrame(draw);
         }
 
         function gameLoop() {
-            createObstacle();
-            draw();
+            if (gameRunning) {
+                createObstacle();
+            }
+            updateCourier();
+            drawGame();
         }
 
-        setInterval(gameLoop, 1000 / 60); // 60 FPS
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowUp") {
+                courier.moveUp = true;
+            }
+            if (e.key === "ArrowDown") {
+                courier.moveDown = true;
+            }
+        });
 
+        document.addEventListener("keyup", (e) => {
+            if (e.key === "ArrowUp") {
+                courier.moveUp = false;
+            }
+            if (e.key === "ArrowDown") {
+                courier.moveDown = false;
+            }
+        });
+
+        gameLoop();
     </script>
 </body>
 </html>
 
-
-
-
-
-</body>
-
-</html>
