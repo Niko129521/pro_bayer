@@ -59,21 +59,12 @@
 
         // Функция для создания препятствий
         function createObstacle() {
+            const type = Math.random() < 0.5 ? 'ground' : 'air'; // Определяем тип препятствия
             const width = Math.random() * 40 + 30;
-            const height = Math.random() * 50 + 20;
-            const yPos = canvas.height - height - 50;
-            const gap = Math.random() * 200 + 100; // Расстояние между препятствиями
+            const height = type === 'ground' ? 50 : Math.random() * 50 + 50; // Препятствия на земле будут иметь фиксированную высоту
+            const yPos = type === 'ground' ? canvas.height - height - 50 : canvas.height - height - 200; // Препятствия на земле — у земли, а на воздухе — выше.
 
-            obstacles.push({ x: canvas.width, y: yPos, width: width, height: height, gap: gap });
-        }
-
-        // Функция для создания товаров
-        function createItem() {
-            const itemTypes = ['clothes', 'box']; // Символизирует разные товары
-            const type = itemTypes[Math.floor(Math.random() * itemTypes.length)];
-            const size = 30;
-            const yPos = canvas.height - size - 50;
-            items.push({ x: canvas.width, y: yPos, width: size, height: size, type: type });
+            obstacles.push({ x: canvas.width, y: yPos, width: width, height: height, type: type });
         }
 
         // Движение курьера
@@ -129,11 +120,12 @@
             // Двигаем и рисуем препятствия
             obstacles.forEach((obstacle, index) => {
                 obstacle.x -= 4;
-                ctx.fillStyle = 'red';
+                ctx.fillStyle = obstacle.type === 'ground' ? 'red' : 'orange';
                 ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
 
-                // Проверка на столкновение с курьером
-                if (courier.x < obstacle.x + obstacle.width &&
+                // Проверка на столкновение с курьером (для препятствий на земле)
+                if (obstacle.type === 'ground' && 
+                    courier.x < obstacle.x + obstacle.width &&
                     courier.x + courier.width > obstacle.x &&
                     courier.y < obstacle.y + obstacle.height &&
                     courier.y + courier.height > obstacle.y) {
@@ -161,6 +153,11 @@
         }
 
         // Запуск игры
+        update();
+    </script>
+</body>
+</html>
+
         update();
     </script>
 </body>
