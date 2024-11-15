@@ -38,7 +38,6 @@
             transform: translate(-50%, -50%);
             display: none;
         }
-
     </style>
 </head>
 <body>
@@ -57,10 +56,6 @@
         let obstacles = [];
         let score = 0;
         let gameOver = false;
-
-        // Курьер
-        const courierImage = new Image();
-        courierImage.src = 'https://img.icons8.com/ios/452/delivery-truck.png';
 
         // Функция для создания препятствий
         function createObstacle() {
@@ -99,7 +94,10 @@
             if (gameOver) return;
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(courierImage, courier.x, courier.y, courier.width, courier.height);
+
+            // Нарисуем курьера как прямоугольник (или используйте картинку)
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(courier.x, courier.y, courier.width, courier.height);
 
             // Двигаем и рисуем товары
             items.forEach((item, index) => {
@@ -150,6 +148,11 @@
         }
 
         // Запуск игры
+        update();
+    </script>
+</body>
+</html>
+
         update();
     </script>
 </body>
