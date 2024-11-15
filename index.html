@@ -51,7 +51,7 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 
-        let courier = { x: 50, y: canvas.height - 150, width: 50, height: 50, speed: 5 };
+        let courier = { x: 50, y: canvas.height - 150, width: 50, height: 50, speed: 5, gravity: 0.8, lift: -15, velocityY: 0, isJumping: false };
         let items = [];
         let obstacles = [];
         let score = 0;
@@ -59,9 +59,12 @@
 
         // Функция для создания препятствий
         function createObstacle() {
-            const size = Math.random() * 30 + 30;
-            const yPos = canvas.height - size - 50;
-            obstacles.push({ x: canvas.width, y: yPos, width: size, height: size });
+            const width = Math.random() * 40 + 30;
+            const height = Math.random() * 50 + 20;
+            const yPos = canvas.height - height - 50;
+            const gap = Math.random() * 200 + 100; // Расстояние между препятствиями
+
+            obstacles.push({ x: canvas.width, y: yPos, width: width, height: height, gap: gap });
         }
 
         // Функция для создания товаров
@@ -75,17 +78,9 @@
 
         // Движение курьера
         document.addEventListener('keydown', (event) => {
-            if (event.key === 'ArrowUp' && courier.y > 0) {
-                courier.y -= courier.speed;
-            }
-            if (event.key === 'ArrowDown' && courier.y < canvas.height - courier.height) {
-                courier.y += courier.speed;
-            }
-            if (event.key === 'ArrowLeft' && courier.x > 0) {
-                courier.x -= courier.speed;
-            }
-            if (event.key === 'ArrowRight' && courier.x < canvas.width - courier.width) {
-                courier.x += courier.speed;
+            if (event.key === ' ' && !courier.isJumping) { // Пробел для прыжка
+                courier.isJumping = true;
+                courier.velocityY = courier.lift; // Начальная скорость прыжка
             }
         });
 
@@ -95,7 +90,18 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Нарисуем курьера как прямоугольник (или используйте картинку)
+            // Применяем гравитацию
+            courier.velocityY += courier.gravity;
+            courier.y += courier.velocityY;
+
+            // Ограничиваем падение
+            if (courier.y > canvas.height - courier.height) {
+                courier.y = canvas.height - courier.height;
+                courier.velocityY = 0;
+                courier.isJumping = false;
+            }
+
+            // Нарисуем курьера
             ctx.fillStyle = 'blue';
             ctx.fillRect(courier.x, courier.y, courier.width, courier.height);
 
@@ -135,6 +141,13 @@
                     document.querySelector('.game-over').style.display = 'block';
                 }
 
+                // Проверка на перепрыгнутое препятствие (если препятствие прошло мимо курьера)
+                if (obstacle.x + obstacle.width < courier.x && !obstacle.passed) {
+                    score++;
+                    obstacle.passed = true; // Записываем, что препятствие перепрыгнуто
+                    document.querySelector('.score').textContent = `Очки: ${score}`;
+                }
+
                 if (obstacle.x < 0) {
                     obstacles.splice(index, 1);
                 }
@@ -148,11 +161,6 @@
         }
 
         // Запуск игры
-        update();
-    </script>
-</body>
-</html>
-
         update();
     </script>
 </body>
