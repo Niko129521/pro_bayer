@@ -3,161 +3,214 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Courier Game</title>
+    <title>Space Meteor Game</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #f7f7f7;
+            background-color: black;
+            font-family: Arial, sans-serif;
         }
         canvas {
             display: block;
-            background-color: #fff;
+            background-color: #111;
             margin: 0 auto;
-        }
-        #gameCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
         }
         #gameOver {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 48px;
+            font-size: 50px;
             font-family: Arial, sans-serif;
             color: red;
             display: none;
         }
+        #startScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            font-family: Arial, sans-serif;
+            color: white;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
-    <div id="gameOver">Game Over</div>
 
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const gameOverElement = document.getElementById("gameOver");
+<canvas id="gameCanvas"></canvas>
+<div id="startScreen">
+    <p>Space Meteor Game</p>
+    <p>Press ENTER to Start</p>
+</div>
+<div id="gameOver">Game Over</div>
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-        const courierImage = new Image();
-        courierImage.src = 'https://github.com/your-username/your-repository/raw/main/courier.png'; // Замените на ваш URL PNG
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-        const courier = {
-            x: 50,
-            y: canvas.height - 150, // Разместим курьера внизу
-            width: 50,
-            height: 100,
-            speed: 5,
-            image: courierImage,
-            moveUp: false,
-            moveDown: false
-        };
+let gameRunning = false;
+let score = 0;
+let lives = 3;
+let level = 1;
+let meteors = [];
 
-        let obstacles = [];
-        let gameRunning = true;
+const player = {
+    x: canvas.width / 2,
+    y: canvas.height - 100,
+    width: 50,
+    height: 50,
+    speed: 10,
+    color: 'blue',
+    dx: 0,
+    dy: 0,
+};
 
-        function createObstacle() {
-            const height = Math.random() * (canvas.height / 2) + 20;
-            const gap = Math.random() * 150 + 50;
-            obstacles.push({
-                x: canvas.width,
-                y: Math.random() > 0.5 ? 0 : canvas.height - height,
-                width: 20,
-                height: height,
-                gap: gap
-            });
+const meteor = {
+    width: 50,
+    height: 50,
+    speed: 5,
+};
+
+function startGame() {
+    gameRunning = true;
+    score = 0;
+    lives = 3;
+    level = 1;
+    meteors = [];
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('gameOver').style.display = 'none';
+    gameLoop();
+}
+
+function gameLoop() {
+    if (!gameRunning) return;
+
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+
+function update() {
+    player.x += player.dx;
+    player.y += player.dy;
+
+    if (player.x < 0) player.x = 0;
+    if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+    if (player.y < 0) player.y = 0;
+    if (player.y + player.height > canvas.height) player.y = canvas.height - player.height;
+
+    generateMeteors();
+    moveMeteors();
+    checkCollisions();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawPlayer();
+    drawMeteors();
+    drawScore();
+    drawLives();
+    drawLevel();
+}
+
+function drawPlayer() {
+    ctx.fillStyle = player.color;
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+}
+
+function generateMeteors() {
+    if (Math.random() < 0.02 * level) {
+        const x = Math.random() * (canvas.width - meteor.width);
+        const meteorHeight = Math.random() * (canvas.height / 2) + 20;
+        meteors.push({ x, y: -meteorHeight, width: meteor.width, height: meteorHeight, speed: meteor.speed });
+    }
+}
+
+function moveMeteors() {
+    for (let i = 0; i < meteors.length; i++) {
+        meteors[i].y += meteors[i].speed;
+
+        if (meteors[i].y > canvas.height) {
+            meteors.splice(i, 1);
+            i--;
+            score++;
         }
+    }
+}
 
-        function updateObstacles() {
-            for (let i = 0; i < obstacles.length; i++) {
-                obstacles[i].x -= 5;
+function drawMeteors() {
+    ctx.fillStyle = 'red';
+    for (let i = 0; i < meteors.length; i++) {
+        ctx.fillRect(meteors[i].x, meteors[i].y, meteors[i].width, meteors[i].height);
+    }
+}
 
-                if (obstacles[i].x + obstacles[i].width < 0) {
-                    obstacles.splice(i, 1);
-                    i--;
-                }
+function drawScore() {
+    ctx.font = '30px Arial';
+    ctx.fillStyle = 'white';
+    ctx.fillText('Score: ' + score, 20, 40);
+}
+
+function drawLives() {
+    ctx.font = '30px Arial';
+    ctx.fillStyle = 'white';
+    ctx.fillText('Lives: ' + lives, canvas.width - 100, 40);
+}
+
+function drawLevel() {
+    ctx.font = '30px Arial';
+    ctx.fillStyle = 'white';
+    ctx.fillText('Level: ' + level, canvas.width / 2 - 50, 40);
+}
+
+function checkCollisions() {
+    for (let i = 0; i < meteors.length; i++) {
+        if (player.x < meteors[i].x + meteors[i].width &&
+            player.x + player.width > meteors[i].x &&
+            player.y < meteors[i].y + meteors[i].height &&
+            player.y + player.height > meteors[i].y) {
+            
+            meteors.splice(i, 1);
+            i--;
+            lives--;
+            if (lives <= 0) {
+                endGame();
             }
         }
+    }
+}
 
-        function drawObstacles() {
-            for (const obstacle of obstacles) {
-                ctx.fillStyle = "green";
-                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-                ctx.fillRect(obstacle.x, obstacle.y + obstacle.height + obstacle.gap, obstacle.width, canvas.height - obstacle.height - obstacle.gap);
-            }
-        }
+function endGame() {
+    gameRunning = false;
+    document.getElementById('gameOver').style.display = 'block';
+}
 
-        function checkCollision() {
-            for (const obstacle of obstacles) {
-                if (courier.x + courier.width > obstacle.x && courier.x < obstacle.x + obstacle.width) {
-                    if (courier.y < obstacle.height || courier.y + courier.height > canvas.height - obstacle.height) {
-                        gameRunning = false;
-                    }
-                }
-            }
-        }
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowUp') player.dy = -player.speed;
+    if (e.key === 'ArrowDown') player.dy = player.speed;
+    if (e.key === 'ArrowLeft') player.dx = -player.speed;
+    if (e.key === 'ArrowRight') player.dx = player.speed;
+    if (e.key === 'Enter' && !gameRunning) startGame();
+});
 
-        function drawCourier() {
-            ctx.drawImage(courier.image, courier.x, courier.y, courier.width, courier.height);
-        }
+document.addEventListener('keyup', function(e) {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') player.dy = 0;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') player.dx = 0;
+});
 
-        function updateCourier() {
-            if (courier.moveUp && courier.y > 0) {
-                courier.y -= courier.speed;
-            }
+// Start the game on page load
+startGame();
+</script>
 
-            if (courier.moveDown && courier.y + courier.height < canvas.height) {
-                courier.y += courier.speed;
-            }
-        }
-
-        function drawGame() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawCourier();
-            drawObstacles();
-            updateObstacles();
-            checkCollision();
-
-            if (gameRunning) {
-                requestAnimationFrame(drawGame);
-            } else {
-                gameOverElement.style.display = "block";
-            }
-        }
-
-        function gameLoop() {
-            if (gameRunning) {
-                createObstacle();
-            }
-            updateCourier();
-            drawGame();
-        }
-
-        document.addEventListener("keydown", (e) => {
-            if (e.key === "ArrowUp") {
-                courier.moveUp = true;
-            }
-            if (e.key === "ArrowDown") {
-                courier.moveDown = true;
-            }
-        });
-
-        document.addEventListener("keyup", (e) => {
-            if (e.key === "ArrowUp") {
-                courier.moveUp = false;
-            }
-            if (e.key === "ArrowDown") {
-                courier.moveDown = false;
-            }
-        });
-
-        gameLoop();
-    </script>
 </body>
 </html>
+
+
 
